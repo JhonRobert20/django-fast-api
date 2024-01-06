@@ -1,0 +1,11 @@
+# Autodetectar archivos de texto
+* text=auto
+
+# Definir explícitamente archivos de texto
+*.txt text
+*.c text
+*.h text
+
+# Especificar archivos binarios
+*.jpg binary
+*.data binary

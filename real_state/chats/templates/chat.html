@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}Real State{% endblock %}
+{% block content %}
+
+{% load crispy_forms_tags %}
+{% load static %}
+<div class="container-custom py-5">
+	{% if user.is_authenticated %}
+
+	<p class="text-center queso">Real State Chat Api</p>
+	<div id="message-container">
+        {% for content in content_messages %}
+			<div class="{% if content.assistant %}bot-background{% else %}user-background{% endif %}">
+				<p class="message">{{ content.content }}</p>
+			</div>
+        {% endfor %}
+    </div>
+
+	<form id="new-message-form" method="POST">
+		{% csrf_token %}
+		<div class="form-group">
+			<textarea name="content" class="form-control" rows="3"></textarea>
+		</div>
+		<button type="submit" class="btn btn-primary">Send Message</button>
+	</form>
+	<script>
+        function addMessageToDOM(content, assistant=false) {
+            let messageContainer = document.getElementById("message-container");
+
+            let newMessage = document.createElement("div");
+			let newMessageContent = document.createElement("p");
+
+			let backgroundClass = assistant ? "bot-background" : "user-background";
+
+			newMessage.classList.add(backgroundClass);
+			newMessageContent.classList.add("message");
+
+            newMessageContent.textContent = content;
+            newMessage.appendChild(newMessageContent);
+            messageContainer.appendChild(newMessage);
+        }
+
+        document.getElementById("new-message-form").addEventListener("submit", function(event) {
+            event.preventDefault();
+            let messageInput = document.querySelector("#new-message-form textarea[name='content']");
+            let userMessage = messageInput.value;
+			addMessageToDOM(userMessage, false);
+
+
+            let xhr = new XMLHttpRequest();
+            xhr.open("POST", "{% url 'new_message' %}");
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+            xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    let response_data = JSON.parse(xhr.responseText);
+                    let botMessage = response_data.message;
+
+                    // Add user and bot messages to the DOM
+                    addMessageToDOM(botMessage, true);
+                }
+            };
+            xhr.send(JSON.stringify({ content: userMessage, chat_id: "{{ chat_id }}" }));
+
+            // Clear the message input
+            messageInput.value = "";
+        });
+    </script>
+
+	{% else %}
+		<h1 class="text-center"> This information is only for registered users</h1>
+	{% endif %}
+</div>
+
+{% endblock %}

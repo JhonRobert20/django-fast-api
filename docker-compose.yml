@@ -1,0 +1,119 @@
+version: "3.4"
+x-restart-policy: &restart_policy
+  restart: unless-stopped
+
+services:
+
+  # Databases
+  database:
+    <<: *restart_policy
+    image: "postgres:12.2"
+    environment:
+      POSTGRES_DB: real_state
+      POSTGRES_USER: real_state
+      POSTGRES_PASSWORD: real_state!
+    ports:
+      - "5432:5432"
+    volumes:
+      - "real_state-database:/var/lib/postgresql/data"
+    networks:
+      - internal
+
+  mongo:
+    <<: *restart_policy
+    image: "mongo:6.0.5"
+    volumes:
+      - "real_state-mongo:/data/db"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: real_state
+      MONGO_INITDB_ROOT_PASSWORD: real_state!
+      MONGODB_AUTH_DATABASE: admin
+    ports:
+      - "27017:27017"
+    networks:
+      - internal
+
+  # Visualization of the databases
+  mongo-express:
+    <<: *restart_policy
+    image: mongo-express
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_MONGODB_ENABLE_ADMIN: "true"
+      ME_CONFIG_BASICAUTH_USERNAME: real_state
+      ME_CONFIG_BASICAUTH_PASSWORD: real_state!
+      ME_CONFIG_MONGODB_AUTH_DATABASE: admin
+      ME_CONFIG_MONGODB_ADMINUSERNAME: real_state
+      ME_CONFIG_MONGODB_ADMINPASSWORD: real_state!
+      ME_CONFIG_MONGODB_URL: mongodb://real_state:real_state!@mongo:27017/?authMechanism=DEFAULT
+
+    depends_on:
+      - mongo
+    networks:
+      - internal
+
+  adminer:
+    <<: *restart_policy
+    image: adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - database
+    networks:
+      - internal
+
+  # Web
+  web:
+    <<: *restart_policy
+    build:
+      target: local
+      context: real_state/
+    working_dir: /home/ubuntu/webs/real_state/real_state
+    command: ./bin/run.sh
+    depends_on:
+      - database
+      - mongo
+    ports:
+      - "3031:3031"
+      - "4444:4444"
+      - "8000:8000"
+    volumes:
+      - ./real_state:/home/ubuntu/webs/real_state/real_state
+    networks:
+      - internal
+
+  nginx:
+    <<: *restart_policy
+    ports:
+      - "8082:80/tcp"  # Cambiado de 80 a 8082
+      - "443:443"
+    links:
+      - web
+    image: "nginx:latest"
+    volumes:
+      - type: bind
+        read_only: true
+        source: ./nginx/etc/
+        target: /etc/nginx
+      - type: bind
+        read_only: true
+        source: ./nginx/www/
+        target: /var/www/
+    depends_on:
+      - web
+    networks:
+      - internal
+
+volumes:
+  real_state-database:
+    external: true
+  real_state-mongo:
+    external: true
+  real_state-redis:
+    external: true
+
+networks:
+  internal:
+    driver: bridge

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Real State{% endblock %}
+{% block content %}
+
+{% load crispy_forms_tags %}
+
+<div class="container py-5">
+	{% if user.is_authenticated %}
+	<h1><a href="http://localhost:8000/api/docs">API DOCS</a></h1>
+
+	<p class="text-center">See all the estates</p>
+	{% for estate in estates %}
+            <div>
+                <h2>{% if estate.title %}{{ estate.title }}{% else %}{{ title }}{% endif %}</h2>
+                <p>{% if estate.description %}{{ estate.description }}{% else %}{{ description }}{% endif %}</p>
+                <p>{% if estate.coordinates %}{{ estate.coordinates }}{% else %}{{ coordinates }}{% endif %}</p>
+            </div>
+        {% endfor %}
+
+        {% if has_prev %}
+            <a href="?page={{ page_number|add:"-1" }}">Previous Page</a>
+        {% endif %}
+
+        {% if has_next %}
+            <a href="?page={{ page_number|add:"1" }}">Next Page</a>
+        {% endif %}
+	{% else %}
+		<h1 class="text-center"> This information is only for registered users</h1>
+	{% endif %}
+</div>
+
+{% endblock %}
